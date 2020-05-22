@@ -13,9 +13,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -35,7 +33,10 @@ public class NettySerializer implements MySerializer {
     private static ByteBuf readByteBuf;
 
     static {
+        // 堆外内存
         writeByteBuf = PooledByteBufAllocator.DEFAULT.buffer();
+        // 堆内存
+//        writeByteBuf = Unpooled.buffer(10);
         classInfoCache = new HashMap<>();
     }
 
@@ -110,7 +111,8 @@ public class NettySerializer implements MySerializer {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            readByteBuf.clear();
+            readByteBuf.resetReaderIndex();
+//            readByteBuf.clear();
         }
         return null;
     }
@@ -155,11 +157,18 @@ public class NettySerializer implements MySerializer {
             for (Field field : fields) {
                 // 获取字段的属性名和属性值
                 field.setAccessible(true);
-                Class type = field.getType();
+                Class clazz = field.getType();
+
                 // 序列化的顺序
                 MySerialize mySerialize = field.getAnnotation(MySerialize.class);
                 int order = mySerialize.order();
-                classes[order] = type;
+                classes[order] = clazz;
+//                Type type = field.getGenericType();
+//                if (type instanceof ParameterizedType){
+//                    ParameterizedType parameterizedType = (ParameterizedType) type;
+//                    Class<?> c = (Class<?>) parameterizedType.getActualTypeArguments()[0];
+//                    types[order] = c;
+//                }
                 if (ObjectUtil.isNotNull(keys)) {
                     String name = field.getName();
                     keys[order] = name;
@@ -222,6 +231,12 @@ public class NettySerializer implements MySerializer {
             writeStr((String) value);
         } else if (clazz.isArray()) {
             writeArray(clazz, value);
+        } else if (clazz == List.class || clazz.isAssignableFrom(List.class)){
+            writeList(clazz, value);
+        } else if (clazz == Set.class || clazz.isAssignableFrom(Set.class)){
+            writeSet(clazz, value);
+        } else if (clazz == Map.class || clazz.isAssignableFrom(Map.class)){
+            writeMap(clazz, value);
         } else if (clazz.isAnnotationPresent(MySerializable.class)) {
             writeByteBuf.writeBytes(serialize(clazz.cast(value)));
         } else {
@@ -287,6 +302,12 @@ public class NettySerializer implements MySerializer {
             value = readStr();
         } else if (clazz.isArray()) {
             value = readArray();
+        } else if (clazz == List.class || clazz.isAssignableFrom(List.class)){
+            value = readList();
+        } else if (clazz == Set.class || clazz.isAssignableFrom(Set.class)){
+            value = readSet();
+        } else if (clazz == Map.class || clazz.isAssignableFrom(Map.class)){
+            value = readMap();
         } else if (clazz.isAnnotationPresent(MySerializable.class)) {
             value = deserialize(readByteBuf.array(), clazz);
         } else {
@@ -391,13 +412,13 @@ public class NettySerializer implements MySerializer {
 
     private void writeStr(String s) {
         int len = s.length();
-        writeInt(len);
+        writeShort((short) len);
         byte[] bytes = s.getBytes();
         writeByteBuf.writeBytes(bytes);
     }
 
     private String readStr() {
-        int len = readByteBuf.readInt();
+        short len = readShort();
         if (len == 0) {
             return "";
         }
@@ -436,7 +457,7 @@ public class NettySerializer implements MySerializer {
         Object[] array = ArrayUtil.cast(tempClass == null ? arrClass : tempClass, value);
         // 数组长度
         int len = array.length;
-        writeInt(len);
+        writeShort((short) len);
         // 数组的类信息
         writeStr(arrClass.getName());
         // 写数组
@@ -448,7 +469,7 @@ public class NettySerializer implements MySerializer {
     private Object readArray() throws Exception {
         try {
             // 数组长度
-            int len = readByteBuf.readInt();
+            short len = readShort();
             // 数组的类信息
             String className = readStr();
             // 数组的基础数据类
@@ -503,5 +524,137 @@ public class NettySerializer implements MySerializer {
         } catch (Exception e) {
             throw e;
         }
+    }
+
+    private <T> void writeList(Class cla, Object value) throws Exception {
+        List<T> list = (List<T>) value;
+        if (list.isEmpty()){
+            writeShort((short) 0);
+            return;
+        }
+        // 链表长度
+        int size = list.size();
+        writeShort((short) size);
+//        String listClass = cla.getName();
+//        writeStr(listClass);
+        // 链表的类信息
+        Class<T> tClass = (Class<T>) list.get(0).getClass();
+        writeStr(tClass.getName());
+        // 链表数据
+        for (T data: list) {
+            write(data.getClass(), data);
+        }
+    }
+
+    private <T> List<T> readList() throws Exception {
+        // 链表长度
+        short size = readShort();
+        if (size == 0){
+            return null;
+        }
+//        String listClassName = readStr();
+//        List<T> list = (List<T>) CollUtil.create(Class.forName(listClassName));
+        List<T> list = CollUtil.newArrayList();
+        // 链表的类信息
+        String className = readStr();
+        Class<T> clazz = (Class<T>) Class.forName(className);
+        // 链表的数据
+        for (int i = 0; i < size; i++) {
+            list.add((T) read(clazz));
+        }
+        return list;
+    }
+
+    private <T> void writeSet(Class cla, Object value) throws Exception {
+        Set<T> set = (Set<T>) value;
+        if (set.isEmpty()){
+            writeShort((short) 0);
+            return;
+        }
+        // 集合长度
+        int size = set.size();
+        writeShort((short) size);
+        // 集合类型
+//        writeStr(cla.getName());
+        Iterator<T> iterator = set.iterator();
+        // 集合的类信息
+        Class<T> tClass = null;
+        // 集合数据
+        for (Iterator<T> it = iterator; it.hasNext(); ) {
+            T data = it.next();
+            if (tClass == null) {
+                tClass = (Class<T>) data.getClass();
+                writeStr(tClass.getName());
+            }
+            write(data.getClass(), data);
+        }
+    }
+
+    private <T> Set<T> readSet() throws Exception {
+        // 集合长度
+        short size = readShort();
+        if (size == 0){
+            return null;
+        }
+//        String setClassName = readStr();
+//        Set<T> set = (Set<T>) CollUtil.create(Class.forName(setClassName));
+        Set<T> set = CollUtil.newHashSet();
+        // 集合的类信息
+        String className = readStr();
+        Class<T> clazz = (Class<T>) Class.forName(className);
+        // 集合的数据
+        for (int i = 0; i < size; i++) {
+            set.add((T) read(clazz));
+        }
+        return set;
+    }
+
+    private <K,V> void writeMap(Class cla,Object value) throws Exception {
+        Map<K,V> map = (Map<K, V>) value;
+        // 映射的长度
+        if (map.isEmpty()){
+            writeShort((short) 0);
+            return;
+        }
+        int size = map.size();
+        writeShort((short) size);
+//        String mapClassName = cla.getName();
+//        writeStr(mapClassName);
+        Set<K> keySet = map.keySet();
+        Class keySetClass = map.keySet().getClass();
+        writeSet(keySetClass, keySet);
+        Class<V> vClass = null;
+        for (Iterator<K> it = keySet.iterator(); it.hasNext(); ) {
+            K key = it.next();
+            V val = map.get(key);
+            if (vClass == null){
+                vClass = (Class<V>) val.getClass();
+                String className = vClass.getName();
+                writeStr(className);
+            }
+            write(val.getClass(), val);
+        }
+    }
+
+    private <K,V> Map<K,V> readMap() throws Exception {
+        short size = readShort();
+        if (size == 0) {
+            return null;
+        }
+//        String mapClassName = readStr();
+//        Map<K,V> map = CollUtil.createMap(Class.forName(mapClassName));
+        Map<K,V> map = CollUtil.newHashMap();
+        Set<K> keySet = readSet();
+        if (keySet == null){
+            return null;
+        }
+        String className = readStr();
+        Class<V> vClass = (Class<V>) Class.forName(className);
+        for (Iterator<K> it = keySet.iterator(); it.hasNext(); ) {
+            K key = it.next();
+            V val = (V) read(vClass);
+            map.put(key, val);
+        }
+        return map;
     }
 }

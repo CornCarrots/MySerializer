@@ -4,6 +4,9 @@ import annotation.MySerializable;
 import annotation.MySerialize;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author linhao
@@ -25,11 +28,21 @@ public class NettyBean {
     @MySerialize(order = 3)
     private int[] ids;
 
-    @MySerialize(order = 4)
+    @MySerialize(order = 6)
     private double money;
 
     @MySerialize(order = 5)
     private TestBean bean;
+
+    @MySerialize(order = 4)
+    private List<Integer> list;
+
+    @MySerialize(order = 7)
+    private Set<Integer> set;
+
+    @MySerialize(order = 8)
+    private Map<Integer,String> map;
+
 
     public int getId() {
         return id;
@@ -79,6 +92,30 @@ public class NettyBean {
         this.bean = bean;
     }
 
+    public List<Integer> getList() {
+        return list;
+    }
+
+    public void setList(List<Integer> list) {
+        this.list = list;
+    }
+
+    public Set<Integer> getSet() {
+        return set;
+    }
+
+    public void setSet(Set<Integer> set) {
+        this.set = set;
+    }
+
+    public Map<Integer, String> getMap() {
+        return map;
+    }
+
+    public void setMap(Map<Integer, String> map) {
+        this.map = map;
+    }
+
     @Override
     public String toString() {
         return "NettyBean{" +
@@ -88,6 +125,9 @@ public class NettyBean {
                 ", ids=" + Arrays.toString(ids) +
                 ", money=" + money +
                 ", bean=" + bean +
+                ", list=" + list +
+                ", set=" + set +
+                ", map=" + map +
                 '}';
     }
 }

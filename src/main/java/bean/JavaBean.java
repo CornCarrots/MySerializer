@@ -5,6 +5,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author linhao
@@ -21,7 +24,15 @@ public class JavaBean implements Serializable {
 
     private int[] ids;
 
+    private double money;
+
     private TestBean bean;
+
+    private List list;
+
+    private Set set;
+
+    private Map map;
 
     public int getId() {
         return id;
@@ -63,6 +74,38 @@ public class JavaBean implements Serializable {
         this.bean = bean;
     }
 
+    public double getMoney() {
+        return money;
+    }
+
+    public void setMoney(double money) {
+        this.money = money;
+    }
+
+    public List getList() {
+        return list;
+    }
+
+    public void setList(List list) {
+        this.list = list;
+    }
+
+    public Set getSet() {
+        return set;
+    }
+
+    public void setSet(Set set) {
+        this.set = set;
+    }
+
+    public Map getMap() {
+        return map;
+    }
+
+    public void setMap(Map map) {
+        this.map = map;
+    }
+
     @Override
     public String toString() {
         return "JavaBean{" +
@@ -70,7 +113,11 @@ public class JavaBean implements Serializable {
                 ", age=" + age +
                 ", name='" + name + '\'' +
                 ", ids=" + Arrays.toString(ids) +
+                ", money=" + money +
                 ", bean=" + bean +
+                ", list=" + list +
+                ", set=" + set +
+                ", map=" + map +
                 '}';
     }
 
@@ -80,7 +127,11 @@ public class JavaBean implements Serializable {
         out.writeLong(age);
         out.writeUTF(name);
         out.writeObject(ids);
+        out.writeDouble(money);
         out.writeObject(bean);
+        out.writeObject(list);
+        out.writeObject(set);
+        out.writeObject(map);
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
@@ -89,6 +140,10 @@ public class JavaBean implements Serializable {
         age = in.readLong();
         name = in.readUTF();
         ids = (int[]) in.readObject();
+        money = in.readDouble();
         bean = (TestBean) in.readObject();
+        list = (List) in.readObject();
+        set = (Set) in.readObject();
+        map = (Map) in.readObject();
     }
 }
