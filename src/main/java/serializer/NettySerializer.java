@@ -34,9 +34,9 @@ public class NettySerializer implements MySerializer {
 
     static {
         // 堆外内存
-        writeByteBuf = PooledByteBufAllocator.DEFAULT.buffer();
+//        writeByteBuf = PooledByteBufAllocator.DEFAULT.buffer();
         // 堆内存
-//        writeByteBuf = Unpooled.buffer(10);
+        writeByteBuf = Unpooled.buffer(10);
         classInfoCache = new HashMap<>();
     }
 
@@ -67,11 +67,11 @@ public class NettySerializer implements MySerializer {
                     writeAll(obj, classes, values);
                 }
             }
-//            return writeByteBuf.array();
-            int len = writeByteBuf.readableBytes();
-            byte[] arr = new byte[len];
-            writeByteBuf.getBytes(0, arr);
-            return arr;
+            return writeByteBuf.array();
+//            int len = writeByteBuf.readableBytes();
+//            byte[] arr = new byte[len];
+//            writeByteBuf.getBytes(0, arr);
+//            return arr;
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

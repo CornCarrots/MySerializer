@@ -21,7 +21,6 @@ import java.util.Map;
 public class TestSerializer {
     public static void main(String[] args) throws Exception {
         System.out.println("------------------JavaSerializer------------------");
-        long start = System.currentTimeMillis();
         MySerializer mySerializer = new JavaSerializer();
         JavaBean bean = new JavaBean();
         bean.setId(1);
@@ -36,17 +35,20 @@ public class TestSerializer {
         map.put(1, "10");
         map.put(2, "20");
         bean.setMap(map);
+        long start = System.currentTimeMillis();
         byte[] beanBytes = mySerializer.serialize(bean);
+        long end = System.currentTimeMillis();
+        System.out.println("序列化时间：" + (end - start));
         System.out.println("序列化:" + beanBytes.length);
         System.out.println(bean);
         System.out.println(Arrays.toString(beanBytes));
-        JavaBean res = mySerializer.deserialize(beanBytes, JavaBean.class);
-        System.out.println("反序列化");
-        System.out.println(res);
-        long end = System.currentTimeMillis();
-        System.out.println("序列化时间：" + (end - start));
-        System.out.println("----------------------Netty-----------------");
         start = System.currentTimeMillis();
+        JavaBean res = mySerializer.deserialize(beanBytes, JavaBean.class);
+        end = System.currentTimeMillis();
+        System.out.println("反序列化时间：" + (end - start));
+        System.out.println("反序列化:");
+        System.out.println(res);
+        System.out.println("----------------------Netty-----------------");
         mySerializer = new NettySerializer();
         NettyBean nettyBean = new NettyBean();
         nettyBean.setId(1);
@@ -58,14 +60,18 @@ public class TestSerializer {
         nettyBean.setList(CollUtil.newArrayList(1,2,3));
         nettyBean.setSet(CollUtil.newLinkedHashSet(7,9,8));
         nettyBean.setMap(map);
+        start = System.currentTimeMillis();
         beanBytes = mySerializer.serialize(nettyBean);
+        end = System.currentTimeMillis();
+        System.out.println("序列化时间：" + (end - start));
         System.out.println("序列化:" + beanBytes.length);
         System.out.println(nettyBean);
         System.out.println(Arrays.toString(beanBytes));
+        start = System.currentTimeMillis();
         NettyBean resBean = mySerializer.deserialize(beanBytes, NettyBean.class);
-        System.out.println("反序列化");
-        System.out.println(resBean);
         end = System.currentTimeMillis();
-        System.out.println("序列化时间：" + (end - start));
+        System.out.println("反序列化时间：" + (end - start));
+        System.out.println("反序列化:");
+        System.out.println(resBean);
     }
 }
