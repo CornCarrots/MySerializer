@@ -56,10 +56,16 @@ public class TestSerializer {
         nettyBean.setName("test");
         nettyBean.setIds(new int[]{1, 2, 3});
         nettyBean.setMoney(50.55);
-        nettyBean.setBean(new TestBean(1));
+
+        TestBean testBean = new TestBean(1);
+        NettyBean nettyBean1 = new NettyBean();
+        nettyBean1.setId(2);
+        testBean.setNettyBeans(CollUtil.newArrayList(nettyBean1));
+
+        nettyBean.setBean(testBean);
         nettyBean.setList(CollUtil.newArrayList(1,2,3));
-        nettyBean.setSet(CollUtil.newLinkedHashSet(7,9,8));
-        nettyBean.setMap(map);
+//        nettyBean.setSet(CollUtil.newLinkedHashSet(7,9,8));
+//        nettyBean.setMap(map);
         start = System.currentTimeMillis();
         beanBytes = mySerializer.serialize(nettyBean);
         end = System.currentTimeMillis();

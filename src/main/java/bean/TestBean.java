@@ -4,6 +4,7 @@ import annotation.MySerializable;
 import annotation.MySerialize;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * @author linhao
@@ -15,6 +16,9 @@ public class TestBean implements Serializable {
 
     @MySerialize(order = 0)
     private int id;
+
+    @MySerialize(order = 1)
+    private List<NettyBean> nettyBeans;
 
     public TestBean() {
     }
@@ -31,10 +35,19 @@ public class TestBean implements Serializable {
         this.id = id;
     }
 
+    public List<NettyBean> getNettyBeans() {
+        return nettyBeans;
+    }
+
+    public void setNettyBeans(List<NettyBean> nettyBeans) {
+        this.nettyBeans = nettyBeans;
+    }
+
     @Override
     public String toString() {
         return "Bean{" +
                 "id=" + id +
+                "beans=" + (nettyBeans == null ? null : nettyBeans.size()) +
                 '}';
     }
 }

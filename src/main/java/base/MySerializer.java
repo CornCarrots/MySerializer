@@ -15,9 +15,9 @@ public interface MySerializer {
 
     Charset charset = CharsetUtil.UTF_8;
 
-    Byte HEAD_NULL = 0;
+    Byte HEAD_NULL = -128;
 
-    Byte HEAD_NOT_NULL = 1;
+    Byte HEAD_NOT_NULL = 127;
 
     <T> byte[] serialize(T obj) throws Exception;
 

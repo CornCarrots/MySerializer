@@ -6,6 +6,7 @@ import base.MySerializer;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -34,9 +35,9 @@ public class NettySerializer implements MySerializer {
 
     static {
         // 堆外内存
-//        writeByteBuf = PooledByteBufAllocator.DEFAULT.buffer();
+        writeByteBuf = PooledByteBufAllocator.DEFAULT.buffer();
         // 堆内存
-        writeByteBuf = Unpooled.buffer(10);
+//        writeByteBuf = Unpooled.buffer(10);
         classInfoCache = new HashMap<>();
     }
 
@@ -67,11 +68,11 @@ public class NettySerializer implements MySerializer {
                     writeAll(obj, classes, values);
                 }
             }
-            return writeByteBuf.array();
-//            int len = writeByteBuf.readableBytes();
-//            byte[] arr = new byte[len];
-//            writeByteBuf.getBytes(0, arr);
-//            return arr;
+//            return writeByteBuf.array();
+            int len = writeByteBuf.readableBytes();
+            byte[] arr = new byte[len];
+            writeByteBuf.getBytes(0, arr);
+            return arr;
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -95,7 +96,9 @@ public class NettySerializer implements MySerializer {
             if (data.length == 0) {
                 return null;
             }
-            readByteBuf = Unpooled.copiedBuffer(data);
+            if (readByteBuf == null || readByteBuf.readableBytes() == 0) {
+                readByteBuf = Unpooled.copiedBuffer(data);
+            }
             byte head = readByte();
             // 序列化的对象为空
             if (head == HEAD_NULL) {
@@ -111,8 +114,10 @@ public class NettySerializer implements MySerializer {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            readByteBuf.resetReaderIndex();
-//            readByteBuf.clear();
+//            readByteBuf.resetReaderIndex();
+            if (readByteBuf != null && readByteBuf.readableBytes() == 0) {
+                readByteBuf.clear();
+            }
         }
         return null;
     }
@@ -231,14 +236,19 @@ public class NettySerializer implements MySerializer {
             writeStr((String) value);
         } else if (clazz.isArray()) {
             writeArray(clazz, value);
-        } else if (clazz == List.class || clazz.isAssignableFrom(List.class)){
+        } else if (clazz == List.class || clazz.isAssignableFrom(List.class)) {
             writeList(clazz, value);
-        } else if (clazz == Set.class || clazz.isAssignableFrom(Set.class)){
+        } else if (clazz == Set.class || clazz.isAssignableFrom(Set.class)) {
             writeSet(clazz, value);
-        } else if (clazz == Map.class || clazz.isAssignableFrom(Map.class)){
+        } else if (clazz == Map.class || clazz.isAssignableFrom(Map.class)) {
             writeMap(clazz, value);
         } else if (clazz.isAnnotationPresent(MySerializable.class)) {
-            writeByteBuf.writeBytes(serialize(clazz.cast(value)));
+            if (value == null) {
+                writeNull();
+            } else {
+                writeNotNull();
+                writeByteBuf.writeBytes(serialize(clazz.cast(value)));
+            }
         } else {
             writeNull();
         }
@@ -302,19 +312,18 @@ public class NettySerializer implements MySerializer {
             value = readStr();
         } else if (clazz.isArray()) {
             value = readArray();
-        } else if (clazz == List.class || clazz.isAssignableFrom(List.class)){
+        } else if (clazz == List.class || clazz.isAssignableFrom(List.class)) {
             value = readList();
-        } else if (clazz == Set.class || clazz.isAssignableFrom(Set.class)){
+        } else if (clazz == Set.class || clazz.isAssignableFrom(Set.class)) {
             value = readSet();
-        } else if (clazz == Map.class || clazz.isAssignableFrom(Map.class)){
+        } else if (clazz == Map.class || clazz.isAssignableFrom(Map.class)) {
             value = readMap();
         } else if (clazz.isAnnotationPresent(MySerializable.class)) {
-            value = deserialize(readByteBuf.array(), clazz);
-        } else {
-            writeNull();
+            byte head = readByte();
+            if (head == HEAD_NOT_NULL) {
+                value = deserialize(readByteBuf.array(), clazz);
+            }
         }
-        // 修正指针
-        readByteBuf.discardReadBytes();
         return value;
     }
 
@@ -411,6 +420,10 @@ public class NettySerializer implements MySerializer {
     // ----------------------复杂类型读写---------------------
 
     private void writeStr(String s) {
+        if (StrUtil.isEmpty(s)) {
+            writeShort((short) 0);
+            return;
+        }
         int len = s.length();
         writeShort((short) len);
         byte[] bytes = s.getBytes();
@@ -428,29 +441,33 @@ public class NettySerializer implements MySerializer {
     }
 
     private void writeArray(Class classes, Object value) throws Exception {
+        if (value == null) {
+            writeShort((short) 0);
+            return;
+        }
         // 数组的真正类信息
         Class arrClass = classes.getComponentType();
         // 数组的包装类
         Class tempClass = null;
-        if (arrClass == byte.class){
+        if (arrClass == byte.class) {
             value = ArrayUtils.toObject((byte[]) value);
             tempClass = Byte.class;
-        }else if (arrClass == short.class){
+        } else if (arrClass == short.class) {
             value = ArrayUtils.toObject((short[]) value);
             tempClass = Short.class;
-        }else if (arrClass == char.class){
+        } else if (arrClass == char.class) {
             value = ArrayUtils.toObject((char[]) value);
             tempClass = Character.class;
-        } else if (arrClass == int.class){
+        } else if (arrClass == int.class) {
             value = ArrayUtils.toObject((int[]) value);
             tempClass = Integer.class;
-        } else if (arrClass == long.class){
+        } else if (arrClass == long.class) {
             value = ArrayUtils.toObject((long[]) value);
             arrClass = Long.class;
-        } else if (arrClass == float.class){
+        } else if (arrClass == float.class) {
             value = ArrayUtils.toObject((float[]) value);
             arrClass = Float.class;
-        } else if (arrClass == double.class){
+        } else if (arrClass == double.class) {
             value = ArrayUtils.toObject((double[]) value);
             arrClass = Double.class;
         }
@@ -470,30 +487,33 @@ public class NettySerializer implements MySerializer {
         try {
             // 数组长度
             short len = readShort();
+            if (len == 0) {
+                return null;
+            }
             // 数组的类信息
             String className = readStr();
             // 数组的基础数据类
             Class arrayClass = null;
             Class tempClass = null;
-            if ("byte".equals(className)){
+            if ("byte".equals(className)) {
                 arrayClass = byte.class;
                 tempClass = Byte.class;
-            } else if ("short".equals(className)){
+            } else if ("short".equals(className)) {
                 arrayClass = short.class;
                 tempClass = Short.class;
-            } else if ("char".equals(className)){
+            } else if ("char".equals(className)) {
                 arrayClass = char.class;
                 tempClass = Character.class;
-            } else if ("int".equals(className)){
+            } else if ("int".equals(className)) {
                 arrayClass = int.class;
                 tempClass = Integer.class;
-            } else if ("long".equals(className)){
+            } else if ("long".equals(className)) {
                 arrayClass = long.class;
                 tempClass = Long.class;
-            } else if ("float".equals(className)){
+            } else if ("float".equals(className)) {
                 arrayClass = float.class;
                 tempClass = Float.class;
-            } else if ("double".equals(className)){
+            } else if ("double".equals(className)) {
                 arrayClass = double.class;
                 tempClass = Double.class;
             } else {
@@ -502,23 +522,23 @@ public class NettySerializer implements MySerializer {
             // 读数组
             Object[] array = (Object[]) Array.newInstance(tempClass == null ? arrayClass : tempClass, len);
             for (int i = 0; i < len; i++) {
-                array[i] =  read(arrayClass);
+                array[i] = read(arrayClass);
             }
-            if (arrayClass == byte.class){
+            if (arrayClass == byte.class) {
                 return ArrayUtils.toPrimitive((Byte[]) array);
-            } else if (arrayClass == short.class){
+            } else if (arrayClass == short.class) {
                 return ArrayUtils.toPrimitive((Short[]) array);
-            } else if (arrayClass == char.class){
+            } else if (arrayClass == char.class) {
                 return ArrayUtils.toPrimitive((Character[]) array);
-            } else if (arrayClass == int.class){
+            } else if (arrayClass == int.class) {
                 return ArrayUtils.toPrimitive((Integer[]) array);
-            } else if (arrayClass == long.class){
+            } else if (arrayClass == long.class) {
                 return ArrayUtils.toPrimitive((Long[]) array);
-            } else if (arrayClass == float.class){
+            } else if (arrayClass == float.class) {
                 return ArrayUtils.toPrimitive((Float[]) array);
-            } else if (arrayClass == double.class){
+            } else if (arrayClass == double.class) {
                 return ArrayUtils.toPrimitive((Double[]) array);
-            }else {
+            } else {
                 return array;
             }
         } catch (Exception e) {
@@ -528,7 +548,7 @@ public class NettySerializer implements MySerializer {
 
     private <T> void writeList(Class cla, Object value) throws Exception {
         List<T> list = (List<T>) value;
-        if (list.isEmpty()){
+        if (list == null || list.isEmpty()) {
             writeShort((short) 0);
             return;
         }
@@ -541,7 +561,7 @@ public class NettySerializer implements MySerializer {
         Class<T> tClass = (Class<T>) list.get(0).getClass();
         writeStr(tClass.getName());
         // 链表数据
-        for (T data: list) {
+        for (T data : list) {
             write(data.getClass(), data);
         }
     }
@@ -549,7 +569,7 @@ public class NettySerializer implements MySerializer {
     private <T> List<T> readList() throws Exception {
         // 链表长度
         short size = readShort();
-        if (size == 0){
+        if (size == 0) {
             return null;
         }
 //        String listClassName = readStr();
@@ -567,7 +587,7 @@ public class NettySerializer implements MySerializer {
 
     private <T> void writeSet(Class cla, Object value) throws Exception {
         Set<T> set = (Set<T>) value;
-        if (set.isEmpty()){
+        if (set == null || set.isEmpty()) {
             writeShort((short) 0);
             return;
         }
@@ -593,7 +613,7 @@ public class NettySerializer implements MySerializer {
     private <T> Set<T> readSet() throws Exception {
         // 集合长度
         short size = readShort();
-        if (size == 0){
+        if (size == 0) {
             return null;
         }
 //        String setClassName = readStr();
@@ -609,10 +629,10 @@ public class NettySerializer implements MySerializer {
         return set;
     }
 
-    private <K,V> void writeMap(Class cla,Object value) throws Exception {
-        Map<K,V> map = (Map<K, V>) value;
+    private <K, V> void writeMap(Class cla, Object value) throws Exception {
+        Map<K, V> map = (Map<K, V>) value;
         // 映射的长度
-        if (map.isEmpty()){
+        if (map == null || map.isEmpty()) {
             writeShort((short) 0);
             return;
         }
@@ -627,7 +647,7 @@ public class NettySerializer implements MySerializer {
         for (Iterator<K> it = keySet.iterator(); it.hasNext(); ) {
             K key = it.next();
             V val = map.get(key);
-            if (vClass == null){
+            if (vClass == null) {
                 vClass = (Class<V>) val.getClass();
                 String className = vClass.getName();
                 writeStr(className);
@@ -636,16 +656,16 @@ public class NettySerializer implements MySerializer {
         }
     }
 
-    private <K,V> Map<K,V> readMap() throws Exception {
+    private <K, V> Map<K, V> readMap() throws Exception {
         short size = readShort();
         if (size == 0) {
             return null;
         }
 //        String mapClassName = readStr();
 //        Map<K,V> map = CollUtil.createMap(Class.forName(mapClassName));
-        Map<K,V> map = CollUtil.newHashMap();
+        Map<K, V> map = CollUtil.newHashMap();
         Set<K> keySet = readSet();
-        if (keySet == null){
+        if (keySet == null) {
             return null;
         }
         String className = readStr();
