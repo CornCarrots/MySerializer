@@ -7,7 +7,10 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.sun.corba.se.impl.transport.ByteBufferPoolImpl;
+import com.sun.corba.se.pept.transport.ByteBufferPool;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import org.apache.commons.lang3.ArrayUtils;
@@ -29,16 +32,22 @@ public class NettySerializer implements MySerializer {
      */
     private static HashMap<Class, List<Field>> classInfoCache;
 
-    private static ByteBuf writeByteBuf;
+    private ByteBuf writeByteBuf;
 
-    private static ByteBuf readByteBuf;
+    private ByteBuf readByteBuf;
+
+    private static ThreadLocal<ByteBuf> readThreadLocal;
+
+    private static ThreadLocal<ByteBuf> writeBufThreadLocal;
 
     static {
         // 堆外内存
-        writeByteBuf = PooledByteBufAllocator.DEFAULT.buffer();
+//        writeByteBuf = PooledByteBufAllocator.DEFAULT.buffer();
         // 堆内存
 //        writeByteBuf = Unpooled.buffer(10);
         classInfoCache = new HashMap<>();
+        readThreadLocal = new ThreadLocal<>();
+        writeBufThreadLocal = new ThreadLocal<>();
     }
 
     /**
@@ -51,6 +60,11 @@ public class NettySerializer implements MySerializer {
     @Override
     public <T> byte[] serialize(T obj) throws Exception {
         try {
+            writeByteBuf = writeBufThreadLocal.get();
+            if (writeByteBuf == null){
+                writeByteBuf = Unpooled.buffer();
+                writeBufThreadLocal.set(writeByteBuf);
+            }
             // 对象为空
             if (ObjectUtil.isNull(obj)) {
                 writeNull();
@@ -96,8 +110,13 @@ public class NettySerializer implements MySerializer {
             if (data.length == 0) {
                 return null;
             }
+//            if (readByteBuf == null || readByteBuf.readableBytes() == 0) {
+//                readByteBuf =  Unpooled.copiedBuffer(data);
+//            }
+            readByteBuf = readThreadLocal.get();
             if (readByteBuf == null || readByteBuf.readableBytes() == 0) {
-                readByteBuf = Unpooled.copiedBuffer(data);
+                readByteBuf =  Unpooled.copiedBuffer(data);
+                readThreadLocal.set(readByteBuf);
             }
             byte head = readByte();
             // 序列化的对象为空
@@ -116,7 +135,7 @@ public class NettySerializer implements MySerializer {
         } finally {
 //            readByteBuf.resetReaderIndex();
             if (readByteBuf != null && readByteBuf.readableBytes() == 0) {
-                readByteBuf.clear();
+                readByteBuf = null;
             }
         }
         return null;
