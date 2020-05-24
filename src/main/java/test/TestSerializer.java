@@ -89,7 +89,7 @@ public class TestSerializer {
                 NettyBean nettyBean1 = new NettyBean();
                 nettyBean1.setId(1);
                 nettyBean1.setAge(100);
-                nettyBean1.setName("test");
+                nettyBean1.setName("哈哈");
                 nettyBean1.setIds(new int[]{1, 2, 3});
                 nettyBean1.setMoney(50.55);
                 nettyBean1.setBean(testBean);
@@ -111,10 +111,8 @@ public class TestSerializer {
         ThreadPoolExecutor executor =  new ThreadPoolExecutor(2, 10, 10, TimeUnit.SECONDS,
                 new ArrayBlockingQueue<Runnable>(2), ThreadFactoryBuilder.create().build());
         try {
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 3; i++) {
                 executor.execute(runnable);
-                executor.execute(runnable);
-
             }
         }finally {
             executor.shutdown();

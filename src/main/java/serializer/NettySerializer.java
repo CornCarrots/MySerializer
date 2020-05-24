@@ -17,6 +17,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -443,20 +444,37 @@ public class NettySerializer implements MySerializer {
             writeShort((short) 0);
             return;
         }
-        int len = s.length();
+        // 当前指针
+        int index = writeByteBuf.markWriterIndex().writerIndex();
+        // 写入暂时长度
+        writeShort((short) 0);
+        // 写入编码UTF8的字符串
+        int len = ByteBufUtil.writeUtf8(writeByteBuf, s);
+        // 修正长度
+        writeByteBuf.resetWriterIndex();
         writeShort((short) len);
-        byte[] bytes = s.getBytes();
-        writeByteBuf.writeBytes(bytes);
+        // 修正指针
+        writeByteBuf.writerIndex(index + Short.BYTES + len + 1);
+//        writeShort((short) (len));
+//        writeByteBuf.writeBytes(s.getBytes(StandardCharsets.UTF_8));
     }
 
     private String readStr() {
+        // 当前指针
+        int index = readByteBuf.readerIndex();
+        // 读取长度
         short len = readShort();
         if (len == 0) {
             return "";
         }
-        byte[] bytes = new byte[len];
-        readByteBuf.readBytes(bytes);
-        return new String(bytes, charset);
+        // 读取字符串
+        CharSequence charSequence = readByteBuf.readCharSequence(len, StandardCharsets.UTF_8);
+        // 修正指针
+        readByteBuf.readerIndex(index + Short.BYTES + len + 1);
+        return charSequence.toString();
+//        byte[] bytes = new byte[len];
+//        readByteBuf.readBytes(bytes);
+//        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     private void writeArray(Class classes, Object value) throws Exception {
