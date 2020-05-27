@@ -6,13 +6,11 @@ import bean.NettyBean;
 import bean.TestBean;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.thread.ThreadFactoryBuilder;
+import cn.hutool.core.util.StrUtil;
 import serializer.JavaSerializer;
 import serializer.NettySerializer;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -60,9 +58,9 @@ public class TestSerializer {
 //        nettyBean.setMoney(50.55);
 //
         TestBean testBean = new TestBean(1);
-////        NettyBean nettyBean1 = new NettyBean();
-////        nettyBean1.setId(2);
-////        testBean.setNettyBeans(CollUtil.newArrayList(nettyBean1));
+        NettyBean bean = new NettyBean();
+        bean.setId(2);
+        testBean.setNettyBeans(CollUtil.newArrayList(bean));
 //
 //        nettyBean.setBean(testBean);
 //        nettyBean.setList(CollUtil.newArrayList(1,2,3));
@@ -96,14 +94,17 @@ public class TestSerializer {
 //            nettyBean.setList(CollUtil.newArrayList(1,2,3));
 //        nettyBean.setSet(CollUtil.newLinkedHashSet(7,9,8));
 //        nettyBean.setMap(map);
-                byte[] beanBytes1 = serializer1.serialize(nettyBean1);
-                System.out.println(Thread.currentThread().getName() + " 序列化:" + beanBytes1.length);
-                System.out.println(Thread.currentThread().getName() +  " " + nettyBean1);
+                byte[] beanBytes1 = serializer1.serialize(nettyBean1,1, new int[]{1, 2, 3},CollUtil.newArrayList(1,2,3));
+//                System.out.println(Thread.currentThread().getName() +  " " + nettyBean1);
                 System.out.println(Thread.currentThread().getName() + " " + Arrays.toString(beanBytes1));
-                NettyBean resBean1 = serializer1.deserialize(beanBytes1, NettyBean.class);
+//                NettyBean resBean1 = serializer1.deserialize(beanBytes1, NettyBean.class);
+                List deserializeAll = serializer1.deserialize(beanBytes1);
+//                NettyBean resBean1 = (NettyBean) deserializeAll.get(0);
                 System.out.println(Thread.currentThread().getName() + " 反序列化:");
-                System.out.println(Thread.currentThread().getName() + " " + resBean1);
-
+                for (int i = 0; i < deserializeAll.size(); i++) {
+                    System.out.print(deserializeAll.get(i)+"  ");
+                }
+                System.out.println();
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -111,7 +112,7 @@ public class TestSerializer {
         ThreadPoolExecutor executor =  new ThreadPoolExecutor(2, 10, 10, TimeUnit.SECONDS,
                 new ArrayBlockingQueue<Runnable>(2), ThreadFactoryBuilder.create().build());
         try {
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 5; i++) {
                 executor.execute(runnable);
             }
         }finally {

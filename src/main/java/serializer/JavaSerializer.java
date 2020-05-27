@@ -10,7 +10,6 @@ import java.io.*;
  * @description: JDK原生序列化
  */
 public class JavaSerializer implements MySerializer {
-    @Override
     public <T> byte[] serialize(T obj) throws Exception{
         try {
             // 对象字节数组
@@ -25,7 +24,6 @@ public class JavaSerializer implements MySerializer {
         return new byte[0];
     }
 
-    @Override
     public <T> T deserialize(byte[] data, Class<T> clazz) throws Exception{
         try {
             // 对象字节数组

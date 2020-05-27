@@ -19,7 +19,7 @@ public interface MySerializer {
 
     Byte HEAD_NOT_NULL = 127;
 
-    <T> byte[] serialize(T obj) throws Exception;
+//    <T> byte[] serialize(T obj) throws Exception;
 
-    <T> T deserialize(byte[] data, Class<T> clazz) throws Exception;
+//    <T> T deserialize(byte[] data, Class<T> clazz) throws Exception;
 }
