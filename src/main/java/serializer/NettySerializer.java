@@ -222,6 +222,10 @@ public class NettySerializer implements MySerializer {
             writeSet(clazz, obj);
         } else if (clazz == Map.class || Map.class.isAssignableFrom(clazz)) {
             writeMap(clazz, obj);
+        } else if (clazz == Date.class){
+            writeDate((Date) obj);
+        } else if (clazz.isEnum()){
+            writeEnum((Enum) obj);
         }
         // 复杂对象
         else {
@@ -244,7 +248,7 @@ public class NettySerializer implements MySerializer {
     /**
      * 反序列化(非集合型对象)
      */
-    private <T> Object read() throws Exception {
+    private Object read() throws Exception {
         return read(null);
     }
 
@@ -292,6 +296,10 @@ public class NettySerializer implements MySerializer {
                 value = readSet();
             } else if (clazz == Map.class || Map.class.isAssignableFrom(clazz)) {
                 value = readMap();
+            } else if (clazz == Date.class){
+                value = readDate();
+            } else if (clazz.isEnum()){
+                value = readEnum();
             }
             // 复杂类型
             else {
@@ -559,6 +567,13 @@ public class NettySerializer implements MySerializer {
         }
     }
 
+    /**
+     * 写列表
+     * @param cla
+     * @param value
+     * @param <T>
+     * @throws Exception
+     */
     private <T> void writeList(Class cla, Object value) throws Exception {
         try {
             List<T> list = (List<T>) value;
@@ -582,6 +597,12 @@ public class NettySerializer implements MySerializer {
         }
     }
 
+    /**
+     * 读列表
+     * @param <T>
+     * @return
+     * @throws Exception
+     */
     private <T> List<T> readList() throws Exception {
         try {
             // 链表长度
@@ -604,6 +625,13 @@ public class NettySerializer implements MySerializer {
         }
     }
 
+    /**
+     * 写集合
+     * @param cla
+     * @param value
+     * @param <T>
+     * @throws Exception
+     */
     private <T> void writeSet(Class cla, Object value) throws Exception {
         try {
             Set<T> set = (Set<T>) value;
@@ -633,6 +661,12 @@ public class NettySerializer implements MySerializer {
         }
     }
 
+    /**
+     * 读集合
+     * @param <T>
+     * @return
+     * @throws Exception
+     */
     private <T> Set<T> readSet() throws Exception {
         try {
             // 集合长度
@@ -655,6 +689,14 @@ public class NettySerializer implements MySerializer {
         }
     }
 
+    /**
+     * 写映射
+     * @param cla
+     * @param value
+     * @param <K>
+     * @param <V>
+     * @throws Exception
+     */
     private <K, V> void writeMap(Class cla, Object value) throws Exception {
         try {
             Map<K, V> map = (Map<K, V>) value;
@@ -688,6 +730,13 @@ public class NettySerializer implements MySerializer {
         }
     }
 
+    /**
+     * 读映射
+     * @param <K>
+     * @param <V>
+     * @return
+     * @throws Exception
+     */
     private <K, V> Map<K, V> readMap() throws Exception {
         try {
             // 映射数量
@@ -713,6 +762,75 @@ public class NettySerializer implements MySerializer {
             return map;
         } catch (Exception e) {
             logger.error("[read map] fail!", e);
+            throw e;
+        }
+    }
+
+    /**
+     * 写日期
+     * @param value
+     */
+    private void writeDate(Date value){
+        try {
+            if (value == null) {
+                writeLong((long) 0);
+            } else {
+                long time = value.getTime();
+                writeLong(time);
+            }
+        } catch (Exception e) {
+            logger.error("[write date] fail!", e);
+            throw e;
+        }
+    }
+
+    /**
+     * 读日期
+     * @return
+     */
+    private Date readDate(){
+        try {
+            long time = readLong();
+            if (time == 0){
+                return null;
+            }else
+            {
+                return new Date(time);
+            }
+        } catch (Exception e) {
+            logger.error("[read date] fail!", e);
+            throw e;
+        }
+    }
+
+    private void writeEnum(Enum e){
+        try {
+            if (e == null){
+                writeNull();
+            }else {
+                writeNotNull();
+                Class clazz = e.getClass();
+                writeStr(clazz.getName());
+                writeStr(e.name());
+            }
+        } catch (Exception e1) {
+            logger.error("[write enum] fail!", e);
+            throw e1;
+        }
+    }
+
+    private Object readEnum() throws Exception {
+        try {
+            byte head = readByte();
+            if (head == HEAD_NULL){
+                return null;
+            }else {
+                Class clazz = Class.forName(readStr());
+                String name = readStr();
+                return Enum.valueOf(clazz, name);
+            }
+        } catch (ClassNotFoundException e) {
+            logger.error("[read enum] fail!", e);
             throw e;
         }
     }

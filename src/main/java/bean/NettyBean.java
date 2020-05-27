@@ -3,10 +3,7 @@ package bean;
 import annotation.MySerializable;
 import annotation.MySerialize;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author linhao
@@ -43,6 +40,11 @@ public class NettyBean {
     @MySerialize(order = 8)
     private Map<Integer,String> map;
 
+    @MySerialize(order = 9)
+    private Date date;
+
+    @MySerialize(order = 10)
+    private TestEnum testEnum;
 
     public int getId() {
         return id;
@@ -116,6 +118,22 @@ public class NettyBean {
         this.map = map;
     }
 
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
+    public TestEnum getTestEnum() {
+        return testEnum;
+    }
+
+    public void setTestEnum(TestEnum testEnum) {
+        this.testEnum = testEnum;
+    }
+
     @Override
     public String toString() {
         return "NettyBean{" +
@@ -128,6 +146,18 @@ public class NettyBean {
                 ", list=" + list +
                 ", set=" + set +
                 ", map=" + map +
+                ", date=" + date +
+                ", testEnum=" + testEnum +
                 '}';
+    }
+
+    public enum TestEnum{
+        test1(1),
+        test2(2);
+
+        int eid;
+        TestEnum(int eid){
+            this.eid = eid;
+        }
     }
 }

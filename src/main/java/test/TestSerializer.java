@@ -91,11 +91,13 @@ public class TestSerializer {
                 nettyBean1.setIds(new int[]{1, 2, 3});
                 nettyBean1.setMoney(50.55);
                 nettyBean1.setBean(testBean);
+                nettyBean1.setDate(new Date());
+                nettyBean1.setTestEnum(NettyBean.TestEnum.test1);
 //            nettyBean.setList(CollUtil.newArrayList(1,2,3));
 //        nettyBean.setSet(CollUtil.newLinkedHashSet(7,9,8));
 //        nettyBean.setMap(map);
                 byte[] beanBytes1 = serializer1.serialize(nettyBean1,1, new int[]{1, 2, 3},CollUtil.newArrayList(1,2,3));
-//                System.out.println(Thread.currentThread().getName() +  " " + nettyBean1);
+                System.out.println(Thread.currentThread().getName() +  " " + nettyBean1);
                 System.out.println(Thread.currentThread().getName() + " " + Arrays.toString(beanBytes1));
 //                NettyBean resBean1 = serializer1.deserialize(beanBytes1, NettyBean.class);
                 List deserializeAll = serializer1.deserialize(beanBytes1);
@@ -112,7 +114,7 @@ public class TestSerializer {
         ThreadPoolExecutor executor =  new ThreadPoolExecutor(2, 10, 10, TimeUnit.SECONDS,
                 new ArrayBlockingQueue<Runnable>(2), ThreadFactoryBuilder.create().build());
         try {
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 1; i++) {
                 executor.execute(runnable);
             }
         }finally {
