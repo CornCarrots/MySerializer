@@ -60,7 +60,7 @@ public class NettySerializer implements MySerializer {
             // 对象数量
             short size = (short) params.length;
             writeByteBuf.writeShort(size);
-            logger.info("[serialize] num：{}", size);
+            logger.debug("[serialize] num：{}", size);
             // 逐个序列化
             for (int i = 0; i < params.length; i++) {
                 write(params[i]);
@@ -70,10 +70,10 @@ public class NettySerializer implements MySerializer {
             byte[] arr = new byte[len];
             writeByteBuf.getBytes(0, arr);
 
-            logger.info("[serialize] success! byte length:{}",len);
+            logger.debug("[serialize] success! byte length:{}",len);
             return arr;
         }catch (Exception e){
-            logger.error("[serialize] fail!");
+            logger.error("[serialize] fail!", e);
             throw e;
         }finally {
             // 清除
@@ -92,7 +92,7 @@ public class NettySerializer implements MySerializer {
     public List deserialize(byte[] data) throws Exception {
         List res = new ArrayList();
         int len = ArrayUtil.length(data);
-        logger.info("[deserialize] byte length:{}", len);
+        logger.debug("[deserialize] byte length:{}", len);
         try {
             if (len == 0) {
                 return null;
@@ -105,10 +105,10 @@ public class NettySerializer implements MySerializer {
                 Object obj = read();
                 res.add(obj);
             }
-            logger.info("[deserialize] success! object size:{}", res.size());
+            logger.debug("[deserialize] success! object size:{}", res.size());
             return res;
         }catch (Exception e){
-            logger.error("[deserialize] fail!");
+            logger.error("[deserialize] fail!", e);
             throw e;
         }finally {
             if (readByteBuf != null && readByteBuf.readableBytes() == 0) {
